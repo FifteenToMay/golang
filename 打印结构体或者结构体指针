@@ -1,0 +1,22 @@
+// 输出结构体
+func StructPrint(i interface{}) {
+	var kv = make(map[string]interface{})
+	iValue := reflect.ValueOf(i)
+	if iValue.Kind() == reflect.Struct { // i 为struct类型
+		iType := reflect.TypeOf(i)
+		for i := 0; i < iValue.NumField(); i++ {
+			kv[iType.Field(i).Name] = iValue.Field(i)
+		}
+	} else if iValue.Kind() == reflect.Ptr { // i 为ptr类型，但是元素指向的是struct
+		iValueElem := iValue.Elem()
+		iValueElemType := iValueElem.Type()
+		for i := 0; i < iValueElem.NumField(); i++ {
+			kv[iValueElemType.Field(i).Name] = iValueElem.Field(i)
+		}
+	}
+
+	fmt.Println("Agent.SmartPrint: ")
+	for k, v := range kv {
+		fmt.Sprintf("%v:%v\n", k, v)
+	}
+}
