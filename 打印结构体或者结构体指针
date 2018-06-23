@@ -13,9 +13,11 @@ func StructPrint(i interface{}) {
 		for i := 0; i < iValueElem.NumField(); i++ {
 			kv[iValueElemType.Field(i).Name] = iValueElem.Field(i)
 		}
+	} else {
+		fmt.Printf("SmartPrint: iValue.Kind %v is not reflect.Struct or reflect.Ptr\n", iValue.Kind())
 	}
 
-	fmt.Println("Agent.SmartPrint: ")
+	fmt.Println("SmartPrint: ")
 	for k, v := range kv {
 		fmt.Sprintf("%v:%v\n", k, v)
 	}
