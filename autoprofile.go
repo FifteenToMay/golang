@@ -2,8 +2,8 @@ package engine
 
 //
 // 主要用于无法通过监听pprof端口来查看服务器状态的场合（比如tx代理，服务器隔离程度很高），
-// 例如，项目由其他公司代理运营，研发商没有权限接触到服务器，也不能在对应的服务器上开启pprof监听端口，
-// 只能通过代理商提供的工具拉取日志文件，所以需要调整通常使用的pprof调试途径，改成所有调试信息都写入文件
+// 例如，项目由其他公司代理运营，研发没有权限接触到服务器，也不能在对应的服务器上开启pprof监听端口，
+// 只能通过代理商提供的工具拉取日志文件，所以需要调整以往使用的pprof调试途径，改成将调试信息写入文件
 // 然后再拉取profile文件到本地，再做分析
 //
 
@@ -58,24 +58,29 @@ func profileNameTimeStrPrefix() string {
 	return time.Now().Format(TimeFormatLayout)
 }
 
-// Profile 通过指定profile类型和debug值在当前目录下生成profile文件,返回文件名称
-func ProfileToFile(profType string, debug int) (ret string) {
+// Profile 在当前目录下生成profile文件,返回文件名称
+// 参数说明 profType：profile类型；debug：调试级别（0表示不输出debug信息，大于0则表示以旧格式打印调试配置文件，具体请查看net/http/pprof包里的备注）
+// sec：持续时间
+func ProfileToFile(profType string, debug, sec int) (ret string) {
 	var (
 		err      error
 		p        *pprof.Profile
 		fileName = fileName(profType)
 	)
+	if sec <= 0 {
+		sec = 30
+	}
 	switch profType {
 	case ProfileTypeGoroutine, ProfileTypeAlloc, ProfileTypeMutex,
 		ProfileTypeHeap, ProfileTypeThreadCreate, ProfileTypeBlock: // 标准库自带函数，直接调用
 		p = pprof.Lookup(profType)
 	case ProfileTypeCPUProfile: // pprof.Lookup中没有现成的方法，需要自己实现
-		if err = CPUProfile(30); err != nil {
+		if err = CPUProfile(sec); err != nil {
 			ret = err.Error()
 		}
 		return
 	case ProfileTypeTrace: // pprof.Lookup中没有现成的方法，需要自己实现，
-		if err = ProfileTrace(30); err != nil {
+		if err = ProfileTrace(sec); err != nil {
 			ret = err.Error()
 		}
 		return
@@ -103,7 +108,7 @@ func ProfileToFile(profType string, debug int) (ret string) {
 }
 
 // Profile 通过指定profile类型和debug值来搜集信息，返回[]byte格式的profile信息
-func ProfileToBytes(profType string, debug int) (ret []byte, err error) {
+func ProfileToBytes(profType string, debug, sec int) (ret []byte, err error) {
 	var (
 		p      *pprof.Profile
 		buffer = bytes.NewBuffer([]byte{})
@@ -113,10 +118,10 @@ func ProfileToBytes(profType string, debug int) (ret []byte, err error) {
 		ProfileTypeHeap, ProfileTypeThreadCreate, ProfileTypeBlock: // 标准库自带函数，直接调用
 		p = pprof.Lookup(profType)
 	case ProfileTypeCPUProfile: // pprof.Lookup中没有现成的方法，需要自己实现
-		ret, err = CPUProfileBytes(30)
+		ret, err = CPUProfileBytes(sec)
 		return
 	case ProfileTypeTrace: // pprof.Lookup中没有现成的方法，需要自己实现，
-		ret, err = ProfileTraceToBytes(30)
+		ret, err = ProfileTraceToBytes(sec)
 		return
 	default: // todo 给出错误提示
 		return nil, errors.New("type error")
